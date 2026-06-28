@@ -1,0 +1,10 @@
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642000/aihfwkrsrvos17fw3bvs.webp' WHERE sku = 'HSL-5L';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642001/ofafoojehiddxplippsu.webp' WHERE sku = 'SMT-1010-25';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642004/lwag8kodqez43tqnjzpm.jpg' WHERE sku = 'SMT-620-25';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642004/unk4xcxodh39b7nvna84.webp' WHERE sku = 'SC255-25';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642005/pwwzrdthcyikzxn5vvsf.jpg' WHERE sku = 'SC510-5';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642005/ntijs4gnl6nbgdztdlsk.jpg' WHERE sku = 'SC200-25';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642006/bltczv0kmemy9fi3tbxu.webp' WHERE sku = 'SD31-6KG';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642007/g1ux5r3rbgxtehjlcduv.webp' WHERE sku = 'SKF-PRO11-300';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642008/eopozeo9qrho2s8e6xnf.webp' WHERE sku = 'SF161-10';
+UPDATE product_variants SET image_url = 'https://res.cloudinary.com/dzssyvvmg/image/upload/v1782642009/cvceo9kczywy3zxlrmno.webp' WHERE sku = 'SLX-5L';

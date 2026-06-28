@@ -1,0 +1,62 @@
+# PRODUCT REQUIREMENTS DOCUMENT (PRD)
+
+**Projet :** Refonte de la plateforme e-commerce Batim Awad (chezbatimawad.com)  
+**Cible :** B2C (Particuliers, bricoleurs, petits artisans)  
+**Modèle Économique :** Paiement à la livraison exclusif + Frais de port sur devis téléphonique  
+**Version :** 1.1
+
+---
+
+## 1. Stack Technique & Architecture
+
+* **Front-End & Back-Office :** Next.js (App Router) pour garantir le Server-Side Rendering (SSR) et un SEO optimal sur les mots-clés du BTP.
+* **Base de Données & Backend :** Supabase (PostgreSQL). Utilisation du Connection Pooler intégré (Supavisor) pour éviter la saturation des instances de connexion en Serverless.
+* **UI / Design System :** Tailwind CSS couplé à Shadcn/ui.
+* **Gestion des Médias :** Cloudinary (Stockage, optimisation WebP/AVIF et redimensionnement à la volée via le composant `<CldImage>`).
+
+---
+
+## 2. Interface Utilisateur (UX/UI) & Thème
+
+* **Code Couleur :** Ambiance "Industrielle de confiance". Fond et structures en Anthracite/Noir profond, avec des boutons d'action (CTA) en Jaune de sécurité ou Orange travaux.
+* **Navigation Mobile-First :** La barre de recherche et le bouton "Panier" sont fixés dans une *Bottom Bar* (barre de navigation flottante en bas de l'écran), accessible au pouce pour les utilisateurs sur chantier.
+* **Structure de la Page d'Accueil (Séquence verticale) :**
+  1. Hero Banner : Accroche visuelle + Bouton d'action "Voir le catalogue".
+  2. Barre de Réassurance : 3 arguments clés (Service, Tarifs, Expertise) accompagnés d'icônes professionnelles.
+  3. Carrousel des Services : Cartes présentant les expertises techniques de l'entreprise (Diagnostic, Renforcement, Cuvelage/Étanchéité) avec un lien filtrant le catalogue sur la catégorie correspondante.
+  4. Grille "Meilleures Ventes" : Affichage des produits phares avec leur prix réel et leur badge de conditionnement.
+  5. Marques Partenaires (Marquee) : Défilement horizontal infini des logos fabricants en niveaux de gris, reprenant leur couleur d'origine au survol.
+  6. Avis Clients : Grille ou carrousel de 3 témoignages.
+  7. Footer : Mise en avant obligatoire de l'adresse physique du dépôt et des numéros de téléphone.
+* **Fiches Produits :** Présence obligatoire d'un badge indiquant l'unité de vente de manière explicite (ex: "Vendu au sac de 25kg", "Vendu au mètre linéaire", "Vendu au bidon de 5L").
+
+---
+
+## 3. Parcours d'Achat Client (Front-End)
+
+* **Authentification :** "Guest Checkout" par défaut. Pas de création de compte avec mot de passe. Le client valide via un formulaire de contact (Nom, Tél, Wilaya, Commune, Adresse). L'historique est lié au numéro de téléphone en base de données.
+* **Logique de Livraison :** Le tarif de livraison n'est pas fixe. Il est indiqué clairement : `« À définir par téléphone »`.
+* **Tunnel de validation :**
+  * Un encart d'avertissement précise : *« Un conseiller vous appellera pour vous communiquer le tarif du transporteur avant expédition. »*
+  * Le bouton final indique **[ Envoyer ma demande ]** (et non "Payer" ou "Commander").
+* **Gestion des Annulations :** Le client n'a pas de bouton pour annuler sa commande lui-même sur le site. Un message indique que toute modification se fera de vive voix lors de l'appel de confirmation.
+
+---
+
+## 4. Back-Office Administrateur (Mode "Standardiste")
+
+* **Ergonomie d'Appel :** Interface pensée pour un agent au téléphone. Le numéro du client s'affiche sous forme de lien HTML (`<a href="tel:...">`) pour déclencher l'appel en un clic depuis un smartphone ou une tablette.
+* **Bouton Vert [ VALIDER LA COMMANDE ] :**
+  * Ouvre une modale demandant la saisie des "Frais de livraison négociés".
+  * L'action additionne les frais au total provisoire et passe la commande en `CONFIRMED`.
+* **Bouton Rouge [ ANNULER LA COMMANDE ] :**
+  * Ouvre une modale obligeant l'agent à choisir un motif dans un Select (ex: Refus tarif transport, Client injoignable, Doublon, Rupture de stock).
+  * Alimente un dashboard de statistiques d'annulation.
+
+---
+
+## 5. Règles Métier & Gestion des Stocks (L'Épine Dorsale)
+
+* **Stratégie de Stock (Méthode B) :** Le clic du client sur "Envoyer ma demande" ne décrémente pas le stock. Le stock n'est retiré du catalogue qu'au moment où l'administrateur clique sur "Valider la commande" après confirmation téléphonique.
+* **Sécurité SQL :** La validation du back-office utilise une transaction stricte avec verrouillage de ligne (`SELECT ... FOR UPDATE` en PostgreSQL) pour s'assurer que la quantité est physiquement disponible avant de confirmer.
+* **Affichage Front-End du Stock :** Paliers textuels visuels (Vert: "En stock" / Orange: "Stock limité" / Gris: "Sur commande" ou "Rupture de stock").

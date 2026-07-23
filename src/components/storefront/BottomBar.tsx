@@ -1,12 +1,14 @@
 'use client';
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import type { Cart } from "@/lib/types";
 
 export function BottomBar() {
+  const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,7 +50,7 @@ export function BottomBar() {
             onSubmit={(e) => {
               e.preventDefault();
               if (searchQuery.trim()) {
-                window.location.href = `/catalogue?q=${encodeURIComponent(searchQuery)}`;
+                router.push(`/catalogue?q=${encodeURIComponent(searchQuery)}`);
                 setSearchOpen(false);
               }
             }}

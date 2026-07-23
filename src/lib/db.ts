@@ -108,14 +108,32 @@ function saveLocalData<T>(key: string, data: T) {
   }
 }
 
-// In-memory cache for fast storefront rendering
+// In-memory & persistent cache for instant storefront rendering
 let productsCache: { timestamp: number; data: { product: Product; variant: ProductVariant }[] } | null = null;
 let categoriesCache: { timestamp: number; data: Category[] } | null = null;
-const CACHE_TTL_MS = 30000; // 30 seconds
+const CACHE_TTL_MS = 60000; // 60 seconds memory TTL
 
 export function clearProductsCache(): void {
   productsCache = null;
   categoriesCache = null;
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('batimawad_products_cache');
+      localStorage.removeItem('batimawad_categories_cache');
+    } catch (e) {}
+  }
+}
+
+// Background helper for fetching categories from Supabase
+async function fetchCategoriesFromSupabase(): Promise<Category[] | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('categories').select('*').order('sort_order', { ascending: true });
+    if (!error && data) return data as Category[];
+  } catch (err) {
+    console.error('Failed to fetch categories from Supabase', err);
+  }
+  return null;
 }
 
 // Get categories
@@ -124,29 +142,49 @@ export async function getCategories(): Promise<Category[]> {
   if (categoriesCache && (now - categoriesCache.timestamp < CACHE_TTL_MS)) {
     return categoriesCache.data;
   }
+
+  // Try loading from localStorage for instant client rendering
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('batimawad_categories_cache');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
+          categoriesCache = { timestamp: now, data: parsed.data };
+          if (isSupabaseConfigured()) {
+            fetchCategoriesFromSupabase().then((fresh) => {
+              if (fresh && fresh.length > 0) {
+                categoriesCache = { timestamp: Date.now(), data: fresh };
+                saveLocalData('batimawad_categories_cache', { timestamp: Date.now(), data: fresh });
+              }
+            });
+          }
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+  }
+
   if (isSupabaseConfigured()) {
-    const supabase = createClient();
-    const { data, error } = await supabase.from('categories').select('*').order('sort_order', { ascending: true });
-    if (!error && data) {
-      categoriesCache = { timestamp: now, data: data as Category[] };
-      return data as Category[];
+    const fresh = await fetchCategoriesFromSupabase();
+    if (fresh && fresh.length > 0) {
+      categoriesCache = { timestamp: now, data: fresh };
+      if (typeof window !== 'undefined') {
+        saveLocalData('batimawad_categories_cache', { timestamp: now, data: fresh });
+      }
+      return fresh;
     }
   }
+
   const local = getLocalData<Category[]>('batimawad_categories', DEMO_CATEGORIES);
   categoriesCache = { timestamp: now, data: local };
   return local;
 }
 
-// Get all products (with variants) — only active, for the storefront
-export async function getProducts(): Promise<{ product: Product; variant: ProductVariant }[]> {
-  const now = Date.now();
-  if (productsCache && (now - productsCache.timestamp < CACHE_TTL_MS)) {
-    return productsCache.data;
-  }
-
-  if (isSupabaseConfigured()) {
+// Background helper for fetching active products from Supabase
+async function fetchProductsFromSupabase(): Promise<{ product: Product; variant: ProductVariant }[] | null> {
+  try {
     const supabase = createClient();
-    // Single joined query to fetch active products, categories, and variants together
     const { data: products, error } = await supabase
       .from('products')
       .select('*, category:categories(*), product_variants(*)')
@@ -165,10 +203,54 @@ export async function getProducts(): Promise<{ product: Product; variant: Produc
           });
         });
       });
-      productsCache = { timestamp: now, data: result };
       return result;
     }
+  } catch (err) {
+    console.error('Failed to fetch products from Supabase', err);
   }
+  return null;
+}
+
+// Get all products (with variants) — only active, for the storefront
+export async function getProducts(): Promise<{ product: Product; variant: ProductVariant }[]> {
+  const now = Date.now();
+  if (productsCache && (now - productsCache.timestamp < CACHE_TTL_MS)) {
+    return productsCache.data;
+  }
+
+  // Check localStorage for instant response
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('batimawad_products_cache');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
+          productsCache = { timestamp: now, data: parsed.data };
+          if (isSupabaseConfigured()) {
+            fetchProductsFromSupabase().then((fresh) => {
+              if (fresh && fresh.length > 0) {
+                productsCache = { timestamp: Date.now(), data: fresh };
+                saveLocalData('batimawad_products_cache', { timestamp: Date.now(), data: fresh });
+              }
+            });
+          }
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (isSupabaseConfigured()) {
+    const fresh = await fetchProductsFromSupabase();
+    if (fresh && fresh.length > 0) {
+      productsCache = { timestamp: now, data: fresh };
+      if (typeof window !== 'undefined') {
+        saveLocalData('batimawad_products_cache', { timestamp: now, data: fresh });
+      }
+      return fresh;
+    }
+  }
+
   const local = getLocalData<{ product: Product; variant: ProductVariant }[]>('batimawad_products', INITIAL_PRODUCTS);
   productsCache = { timestamp: now, data: local };
   return local;

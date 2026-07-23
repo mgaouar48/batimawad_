@@ -28,7 +28,9 @@ export function ProductCard({ product, variant, onAddToCart, priority = false }:
               alt={product.title}
               fill
               priority={priority}
+              loading={priority ? "eager" : "lazy"}
               decoding="async"
+              unoptimized
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />

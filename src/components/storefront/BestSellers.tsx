@@ -53,11 +53,12 @@ export function BestSellers() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 stagger-children">
-          {products.map(({ product, variant }) => (
+          {products.map(({ product, variant }, index) => (
             <ProductCard
-              key={product.id}
+              key={`${product.id}-${variant.id}`}
               product={product}
               variant={variant}
+              priority={index < 4}
               onAddToCart={() =>
                 addItem({
                   variantId: variant.id,
@@ -67,6 +68,7 @@ export function BestSellers() {
                   unitType: variant.unit_type,
                   price: variant.price,
                   imageUrl: variant.image_url,
+                  stock: variant.stock,
                 })
               }
             />

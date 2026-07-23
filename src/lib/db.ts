@@ -108,74 +108,95 @@ function saveLocalData<T>(key: string, data: T) {
   }
 }
 
+// In-memory cache for fast storefront rendering
+let productsCache: { timestamp: number; data: { product: Product; variant: ProductVariant }[] } | null = null;
+let categoriesCache: { timestamp: number; data: Category[] } | null = null;
+const CACHE_TTL_MS = 30000; // 30 seconds
+
+export function clearProductsCache(): void {
+  productsCache = null;
+  categoriesCache = null;
+}
+
 // Get categories
 export async function getCategories(): Promise<Category[]> {
+  const now = Date.now();
+  if (categoriesCache && (now - categoriesCache.timestamp < CACHE_TTL_MS)) {
+    return categoriesCache.data;
+  }
   if (isSupabaseConfigured()) {
     const supabase = createClient();
     const { data, error } = await supabase.from('categories').select('*').order('sort_order', { ascending: true });
-    if (!error && data) return data as Category[];
+    if (!error && data) {
+      categoriesCache = { timestamp: now, data: data as Category[] };
+      return data as Category[];
+    }
   }
-  return getLocalData<Category[]>('batimawad_categories', DEMO_CATEGORIES);
+  const local = getLocalData<Category[]>('batimawad_categories', DEMO_CATEGORIES);
+  categoriesCache = { timestamp: now, data: local };
+  return local;
 }
 
 // Get all products (with variants) — only active, for the storefront
 export async function getProducts(): Promise<{ product: Product; variant: ProductVariant }[]> {
+  const now = Date.now();
+  if (productsCache && (now - productsCache.timestamp < CACHE_TTL_MS)) {
+    return productsCache.data;
+  }
+
   if (isSupabaseConfigured()) {
     const supabase = createClient();
-    const { data: products, error: pError } = await supabase
+    // Single joined query to fetch active products, categories, and variants together
+    const { data: products, error } = await supabase
       .from('products')
-      .select('*, category:categories(*)')
+      .select('*, category:categories(*), product_variants(*)')
       .eq('is_active', true)
       .order('created_at', { ascending: true });
 
-    const { data: variants, error: vError } = await supabase
-      .from('product_variants')
-      .select('*');
-
-    if (!pError && !vError && products && variants) {
+    if (!error && products) {
       const result: { product: Product; variant: ProductVariant }[] = [];
       products.forEach((p: any) => {
-        const pVariants = variants.filter((v: any) => v.product_id === p.id);
+        const pVariants = p.product_variants || [];
+        const { product_variants, ...productData } = p;
         pVariants.forEach((v: any) => {
           result.push({
-            product: { ...p, category: p.category },
+            product: { ...productData, category: productData.category },
             variant: v,
           });
         });
       });
+      productsCache = { timestamp: now, data: result };
       return result;
     }
   }
-  return getLocalData<{ product: Product; variant: ProductVariant }[]>('batimawad_products', INITIAL_PRODUCTS);
+  const local = getLocalData<{ product: Product; variant: ProductVariant }[]>('batimawad_products', INITIAL_PRODUCTS);
+  productsCache = { timestamp: now, data: local };
+  return local;
 }
 
 // Get ALL products including inactive — for admin panel
 export async function getAllProducts(): Promise<{ product: Product; variant: ProductVariant }[]> {
   if (isSupabaseConfigured()) {
     const supabase = createClient();
-    const { data: products, error: pError } = await supabase
+    const { data: products, error } = await supabase
       .from('products')
-      .select('*, category:categories(*)')
+      .select('*, category:categories(*), product_variants(*)')
       .order('created_at', { ascending: true });
 
-    const { data: variants, error: vError } = await supabase
-      .from('product_variants')
-      .select('*');
-
-    if (!pError && !vError && products && variants) {
+    if (!error && products) {
       const result: { product: Product; variant: ProductVariant }[] = [];
       products.forEach((p: any) => {
-        const pVariants = variants.filter((v: any) => v.product_id === p.id);
+        const pVariants = p.product_variants || [];
+        const { product_variants, ...productData } = p;
         pVariants.forEach((v: any) => {
           result.push({
-            product: { ...p, category: p.category },
+            product: { ...productData, category: productData.category },
             variant: v,
           });
         });
-        // Include products with no variants too
         if (pVariants.length === 0) {
           result.push({
-            product: { ...p, category: p.category },
+            product: { ...productData, category: productData.category },
             variant: { id: '', product_id: p.id, sku: '', attribute_name: 'Standard', unit_type: '', price: 0, stock: 0, image_url: null, created_at: p.created_at, updated_at: p.updated_at },
           });
         }
@@ -186,8 +207,10 @@ export async function getAllProducts(): Promise<{ product: Product; variant: Pro
   return getLocalData<{ product: Product; variant: ProductVariant }[]>('batimawad_products', INITIAL_PRODUCTS);
 }
 
+
 // Add/update product and variant — writes to Supabase when configured
 export async function saveProduct(product: Product, variant: ProductVariant): Promise<void> {
+  clearProductsCache();
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient();
@@ -244,7 +267,9 @@ export async function saveProduct(product: Product, variant: ProductVariant): Pr
 
 // Delete product — removes from Supabase when configured
 export async function deleteProduct(productId: string, variantId: string): Promise<void> {
+  clearProductsCache();
   if (isSupabaseConfigured()) {
+
     try {
       const supabase = createClient();
       if (variantId) {

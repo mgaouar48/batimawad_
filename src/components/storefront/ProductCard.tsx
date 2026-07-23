@@ -13,9 +13,10 @@ interface ProductCardProps {
   product: Product;
   variant: ProductVariant;
   onAddToCart?: () => void;
+  priority?: boolean;
 }
 
-export function ProductCard({ product, variant, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, variant, onAddToCart, priority = false }: ProductCardProps) {
   return (
     <Card className="group relative overflow-hidden border-border/50 bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5">
       {/* Image */}
@@ -26,6 +27,8 @@ export function ProductCard({ product, variant, onAddToCart }: ProductCardProps)
               src={variant.image_url}
               alt={product.title}
               fill
+              priority={priority}
+              decoding="async"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />

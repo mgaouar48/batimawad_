@@ -188,11 +188,12 @@ export default function CataloguePage() {
                 {filtered.length} produit{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
               </p>
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                {filtered.map(({ product, variant }) => (
+                {filtered.map(({ product, variant }, index) => (
                   <ProductCard
                     key={`${product.id}-${variant.id}`}
                     product={product}
                     variant={variant}
+                    priority={index < 6}
                     onAddToCart={() =>
                       addItem({
                         variantId: variant.id,
